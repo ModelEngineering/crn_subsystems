@@ -1,0 +1,9 @@
+jupyterlab
+matplotlib
+nose2
+numpy
+pandas
+pip
+pylint
+sympy
+urllib3
