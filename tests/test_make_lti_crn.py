@@ -5,9 +5,8 @@ import tellurium as te  # type: ignore
 import numpy as np
 import sympy as sp  # type: ignore
 
-IGNORE_TEST = True
-
-
+IGNORE_TEST = False
+IS_PLOT = False
 
 class TestGenerateCrn(unittest.TestCase):
 
@@ -15,8 +14,8 @@ class TestGenerateCrn(unittest.TestCase):
         pass
 
     def testBasicJacobian(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         for _ in range(5):
             num_species = np.random.randint(5, 10)
             max_num_reaction = np.random.randint(5, 10)
@@ -49,7 +48,7 @@ class TestGenerateCrn(unittest.TestCase):
         if IGNORE_TEST:
             return
         for _ in range(10):
-            makeLtiCrn(num_species=10,
+            model = makeLtiCrn(num_species=10,
                     num_reaction=10,
                     num_products_bounds=(1, 5),
                     kinetic_constant_bounds= (0.1, 1),
