@@ -1,9 +1,11 @@
 jupyterlab
 matplotlib
+scipy
 nose2
 numpy
 pandas
 pip
 pylint
 sympy
+tellurium
 urllib3

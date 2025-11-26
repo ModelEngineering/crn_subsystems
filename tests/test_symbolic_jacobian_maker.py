@@ -1,4 +1,4 @@
-from src.lrn_builder.symbolic_jacobian_maker import SymbolicJacobianMaker
+from src.symbolic_jacobian_maker import SymbolicJacobianMaker
 
 import libsbml # type: ignore
 import unittest

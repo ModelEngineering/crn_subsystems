@@ -1,4 +1,4 @@
-import src.lrn_builder.util as util
+import src.util as util
 
 import unittest
 import numpy as np

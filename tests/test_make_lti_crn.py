@@ -1,4 +1,4 @@
-from lrn_builder.make_lti_crn import makeLtiCrn  # type: ignore
+from src.make_lti_crn import makeLtiCrn  # type: ignore
 
 import unittest
 import tellurium as te  # type: ignore

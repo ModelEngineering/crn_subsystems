@@ -7,7 +7,7 @@ Conventions for Antimony models.
 """
 
 
-from src.lrn_builder.symbolic_jacobian_maker import SymbolicJacobianMaker
+from src.symbolic_jacobian_maker import SymbolicJacobianMaker
 
 from collections import namedtuple
 import matplotlib.pyplot as plt  # type: ignore
@@ -19,14 +19,7 @@ import tellurium as te # type: ignore
 from typing import Tuple, Union, Optional, cast, Any
 
 # Constants
-REACTANT_FACTOR = 100  # Factor used to name rate constant (row in A matrix)
-PRODUCT_FACTOR = 1   # Factor used to name rate constant (column in A matrix)
-INPUT_NAME = "S1"  # Default input species nJame
 # Null values for key attributes
-NULL_JACOBIAN_SMAT = sp.Matrix()
-NULL_JACOBIAN_DF = pd.DataFrame()
-NULL_ANTIMONY_STR = ""
-NULL_KINETIC_CONSTANT_DCT = {}
 NULL_TRANSFER_FUNCTION_EXPR = sp.Symbol("Unknown")
 NULL_TRANSFER_FUNCTION_MATRIX = sp.Matrix()
 NULL_SPECIES_NAME = ""

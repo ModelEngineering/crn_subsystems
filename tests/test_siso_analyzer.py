@@ -1,4 +1,4 @@
-from lrn_builder.siso_analyzer import SISOAnalyzer  # type: ignore
+from src.siso_analyzer import SISOAnalyzer  # type: ignore
 
 import matplotlib.pyplot as plt  # type: ignore
 from scipy import signal  # type: ignore
@@ -8,15 +8,14 @@ import pandas as pd  # type: ignore
 import sympy as sp  # type: ignore
 from typing import Optional
 
-IGNORE_TEST = True
-IS_PLOT = True
+IGNORE_TEST = False
+IS_PLOT = False
 
 MODEL = """
--> $S1_; k1
 S1_ -> S2_; k2*S1_
 S2_ -> S3_; k3*S2_
 S3_ -> ; k4*S3_
-S1_ = 1
+$S1_ = 1
 S2_ = 0
 S3_ = 0
 k1 = 1
@@ -220,8 +219,8 @@ class TestMakeSequentialAntimony(unittest.TestCase):
         if IGNORE_TEST:
             return
         analyzer = SISOAnalyzer(MODEL)
-        k1, k2, k3, k4, s = sp.symbols('k1, k2 k3 k4 s')
-        expected_tf_expr = 1.0*k1*k2*k3/(k3*k4 + k3*s + k4*s + s**2)
+        k2, k3, k4, s = sp.symbols('k2 k3 k4 s')
+        expected_tf_expr = 1.0*k2*k3/(k3*k4 + k3*s + k4*s + s**2)
         tf_expr = analyzer.transfer_function_expr
         self.assertEqual(sp.simplify(tf_expr - expected_tf_expr), 0)
         if IS_PLOT:
@@ -340,7 +339,6 @@ class TestMakeSequentialAntimony(unittest.TestCase):
         analyzer = SISOAnalyzer(model, output_name="S3_")
         transfer_function = analyzer.makeTransferFunction()
         self.assertIsNotNone(transfer_function)
-        import pdb; pdb.set_trace()
         if IS_PLOT:
             analyzer.plotTransferFunctionValidation()
 
@@ -401,8 +399,8 @@ class TestMakeSequentialAntimony(unittest.TestCase):
         self.assertGreater(tf1.num[-1]/tf1.den[-1], 0) # type: ignore
 
     def testBug3(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         model = """
         species S1_;
 
