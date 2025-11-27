@@ -472,9 +472,9 @@ class TestMakeSequentialAntimony(unittest.TestCase):
     def testCalculateStepResponseBig(self):
         if IGNORE_TEST:
             return
-        for _ in range(10):
+        for _ in range(5):
             model = makeLtiCrn(num_species=10,
-                    num_reaction=10,
+                    num_reaction=100,
                     num_products_bounds=(1, 5),
                     kinetic_constant_bounds= (0.1, 1),
                     stoichiometry_bounds=(1, 3))
