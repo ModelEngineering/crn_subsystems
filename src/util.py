@@ -1,5 +1,5 @@
 import numpy as np
-import pandas as pd
+import pandas as pd # type: ignore
 import sympy as sp  # type: ignore
 from typing import List, Optional, Any
 
@@ -54,3 +54,48 @@ def subsUsingName(expr: Any, subs_dct: dict)->Any:
     str_to_symbol = {str(s): s for s in symbols}
     actual_subs_dct = {str_to_symbol[k]: v for k, v in subs_dct.items() if k in str_to_symbol}
     return expr.subs(actual_subs_dct)
+
+def solveLinearSystem(A, b, fixed=None):
+    """
+    Solve Ax = b in the least-squares sense, with optional fixed coordinates.
+    
+    Args:
+        A: matrix (m x n)
+        b: right-hand side vector (length m)
+        fixed: dict mapping coordinate index -> fixed value
+            e.g., {0: 1.5, 3: 0.0} fixes x[0]=1.5 and x[3]=0.0
+    
+    Returns:
+        x: solution
+        residual: norm of (Ax - b)
+        rank: effective rank of the (reduced) system
+    """
+    A = np.asarray(A, dtype=float)
+    b = np.asarray(b, dtype=float)
+    n = A.shape[1]
+    # Handle case with no fixed coordinates
+    if fixed is None:
+        fixed = {}
+    # Identify free vs fixed indices
+    fixed_indices = sorted(fixed.keys())
+    free_indices = [i for i in range(n) if i not in fixed]
+    if not free_indices:
+        # All coordinates fixed; just compute residual
+        x = np.array([fixed[i] for i in range(n)])
+        residual = np.linalg.norm(A @ x - b)
+        return x, residual, 0
+    # Move fixed terms to the right-hand side: A_free @ x_free = b - A_fixed @ x_fixed
+    A_free = A[:, free_indices]
+    A_fixed = A[:, fixed_indices]
+    x_fixed = np.array([fixed[i] for i in fixed_indices])
+    x_fixed = np.reshape(x_fixed, (-1, 1))
+    b_adjusted = b - (A_fixed @ x_fixed)
+    # Solve reduced system
+    x_free, residuals, rank, _ = np.linalg.lstsq(A_free, b_adjusted, rcond=None)
+    # Reassemble full solution
+    x = np.zeros(n)
+    x[fixed_indices] = x_fixed
+    x[free_indices] = np.reshape(x_free, (-1,))
+    residual = np.linalg.norm(A @ x - b)
+    #
+    return x, residual, rank

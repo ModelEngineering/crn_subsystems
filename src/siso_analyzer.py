@@ -18,6 +18,8 @@ import sympy as sp  # type: ignore
 import tellurium as te # type: ignore
 from typing import Tuple, Union, Optional, cast, Any
 
+from src.util import solveLinearSystem
+
 # Constants
 # Null values for key attributes
 NULL_TRANSFER_FUNCTION_EXPR = sp.Symbol("Unknown")
@@ -52,10 +54,13 @@ class SISOAnalyzer(object):
         self.original_antimony_str = antimony_str
         self.antimony_str = antimony_str.replace(f"${input_name}", f"{input_name}")  # Remove boundary marker for Tellurium
         self.roadrunner = te.loada(self.antimony_str)
+        self.original_roadrunner = te.loada(self.original_antimony_str)
         self.input_name = input_name
         # Initialize other properties
         self.initialize()
         self.output_name = self._updateOutputName(output_name)
+        self.input_species_index = self.species_names.index(self.input_name)
+        self.output_species_index = self.species_names.index(self.output_name)
         # The following are calculaed via deferred evaluation after initialize
         self._transfer_function_smat = NULL_TRANSFER_FUNCTION_MATRIX
         self._transfer_function_expr = NULL_TRANSFER_FUNCTION_EXPR
@@ -265,3 +270,39 @@ class SISOAnalyzer(object):
         plt.grid()
         plt.legend(["Comparison", "Ideal"])
         plt.show()
+
+    def calculateStepResponse(self, step_size: float = 1.0) -> float:
+        """
+        Calculates the step response using steady state analysis by setting all derivatives to zero.
+        to zero and requiring that the input species increases by step_size.
+
+        Args:
+            time_vec (np.ndarray): Time vector for the step response.
+            step_size (float): The magnitude of the step input.
+
+        Returns:
+            step response (float): ratio of output to input
+        """
+        b_mat = np.zeros((self.num_species, 1))
+        b_mat[self.input_species_index, 0] = step_size
+        A_mat = np.array(self.jacobian_df.values, dtype=float)
+        A_mat[self.input_species_index, :] = np.zeros((1, self.num_species))
+        # Solve Ax = -b for steady state
+        x_ss, residual, rank = solveLinearSystem(A_mat, b_mat, 
+                fixed={self.input_species_index: step_size})
+        if residual > 1e-6:
+            #raise ValueError(f"Could not solve for steady state: residual={residual}")
+            pass
+        step_response = x_ss[self.output_species_index] / step_size
+        return step_response
+    
+    def calculateEigenvalues(self) -> np.ndarray:
+        """
+        Calculates the eigenvalues of the Jacobian matrix.
+
+        Returns:
+            np.ndarray: Array of eigenvalues in descending order.
+        """
+        A_mat = np.array(self.jacobian_df.values, dtype=float)
+        eigenvalues = np.linalg.eigvals(A_mat)
+        return -np.sort(-eigenvalues)

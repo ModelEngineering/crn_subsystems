@@ -1,7 +1,9 @@
 from src.siso_analyzer import SISOAnalyzer  # type: ignore
+from src.make_lti_crn import makeLtiCrn  # type: ignore
 
 import matplotlib.pyplot as plt  # type: ignore
 from scipy import signal  # type: ignore
+import numpy as np
 import unittest
 import tellurium as te  # type: ignore
 import pandas as pd  # type: ignore
@@ -447,6 +449,52 @@ class TestMakeSequentialAntimony(unittest.TestCase):
         if IS_PLOT:
             analyzer.plotTransferFunctionValidation()
 
+    def compareStepResponse(self, model: str)-> bool:
+        # Return False if couldn't do the comparison
+        analyzer = SISOAnalyzer(model)
+        try:
+            analyzer.original_roadrunner.steadyState()
+        except Exception:
+            return False
+        simulated_output = analyzer.original_roadrunner[analyzer.output_name]
+        #
+        step_size = 1.0
+        step_response = analyzer.calculateStepResponse(step_size)
+        self.assertIsInstance(step_response, float)
+        self.assertAlmostEqual(simulated_output, step_response, places=5)
+        return True
+
+    def testCalculateStepResponseSmall(self):
+        if IGNORE_TEST:
+            return
+        self.compareStepResponse(MODEL)
+
+    def testCalculateStepResponseBig(self):
+        if IGNORE_TEST:
+            return
+        for _ in range(10):
+            model = makeLtiCrn(num_species=10,
+                    num_reaction=10,
+                    num_products_bounds=(1, 5),
+                    kinetic_constant_bounds= (0.1, 1),
+                    stoichiometry_bounds=(1, 3))
+            if IS_PLOT and not self.compareStepResponse(model):
+                print("Could not compare step response for generated model")
+
+    def testCalculateEigenvalues(self):
+        if IGNORE_TEST:
+            return
+        analyzer = SISOAnalyzer(MODEL)
+        eigenvalueIds = analyzer.roadrunner.getEigenValueIds()
+        rr_eigenvalues = np.array(
+                [analyzer.roadrunner.getValue(eid) for eid in eigenvalueIds
+                if "eigen(" in eid])
+        rr_eigenvalues = -np.sort(-rr_eigenvalues)
+        eigenvalues = analyzer.calculateEigenvalues()
+        self.assertIsInstance(eigenvalues, np.ndarray)
+        self.assertEqual(len(eigenvalues), 3)
+        self.assertTrue(np.all(np.diff(eigenvalues) <= 0))  # Check descending order
+        self.assertTrue(np.allclose(eigenvalues, rr_eigenvalues))
 
 
 if __name__ == '__main__':
