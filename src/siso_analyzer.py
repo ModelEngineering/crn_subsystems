@@ -283,17 +283,17 @@ class SISOAnalyzer(object):
         Returns:
             step response (float): ratio of output to input
         """
-        b_mat = np.zeros((self.num_species, 1))
-        b_mat[self.input_species_index, 0] = step_size
+        b_mat = np.zeros((self.num_species))
+        b_mat[self.input_species_index] = step_size
         A_mat = np.array(self.jacobian_df.values, dtype=float)
         A_mat[self.input_species_index, :] = np.zeros((1, self.num_species))
         # Solve Ax = -b for steady state
-        x_ss, residual, rank = solveLinearSystem(A_mat, b_mat, 
+        x_ss, residual, _ = solveLinearSystem(A_mat, b_mat, 
                 fixed={self.input_species_index: step_size})
         if residual > 1e-6:
             #raise ValueError(f"Could not solve for steady state: residual={residual}")
             pass
-        step_response = x_ss[self.output_species_index] / step_size
+        step_response = x_ss[self.output_species_index] / step_size  # type: ignore
         return step_response
     
     def calculateEigenvalues(self) -> np.ndarray:

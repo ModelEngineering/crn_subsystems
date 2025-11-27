@@ -88,14 +88,42 @@ def solveLinearSystem(A, b, fixed=None):
     A_free = A[:, free_indices]
     A_fixed = A[:, fixed_indices]
     x_fixed = np.array([fixed[i] for i in fixed_indices])
-    x_fixed = np.reshape(x_fixed, (-1, 1))
+    #x_fixed = np.reshape(x_fixed, (-1, 1))
     b_adjusted = b - (A_fixed @ x_fixed)
     # Solve reduced system
-    x_free, residuals, rank, _ = np.linalg.lstsq(A_free, b_adjusted, rcond=None)
-    # Reassemble full solution
-    x = np.zeros(n)
-    x[fixed_indices] = x_fixed
-    x[free_indices] = np.reshape(x_free, (-1,))
-    residual = np.linalg.norm(A @ x - b)
-    #
-    return x, residual, rank
+    result = np.linalg.lstsq(A_free, b_adjusted, rcond=None)
+    x_free_solutions = [result[0].flatten()]
+    rank = result[2]
+    
+    # If system is underdetermined, there are infinitely many solutions
+    # We'll sample a few and pick the one with smallest residual
+    if rank < len(free_indices):
+        # Get the null space of A_free
+        _, s, Vt = np.linalg.svd(A_free, full_matrices=True)
+        # Null space corresponds to singular values that are effectively zero
+        #tol = s[0] * max(A_free.shape) * np.finfo(float).eps if len(s) > 0 else 0
+        null_space = Vt[rank:, :].T  # columns are basis vectors for null space
+        
+        # Generate additional candidate solutions by adding null space components
+        # Try a few different linear combinations
+        for scale in [-10, -1, -0.1, 0.1, 1, 10]:
+            for i in range(null_space.shape[1]):
+                x_candidate = x_free_solutions[0] + scale * null_space[:, i]
+                x_free_solutions.append(x_candidate)
+    
+    # Evaluate residual for each candidate solution and pick the best
+    best_residual = float('inf')
+    best_x = None
+    
+    for x_free in x_free_solutions:
+        x = np.zeros(n)
+        for i, idx in enumerate(fixed_indices):
+            x[idx] = fixed[idx]
+        for i, idx in enumerate(free_indices):
+            x[idx] = x_free[i]
+        residual = np.linalg.norm(A @ x - b)
+        if residual < best_residual:
+            best_residual = residual
+            best_x = x
+    
+    return best_x, best_residual, rank

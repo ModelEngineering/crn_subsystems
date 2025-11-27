@@ -452,13 +452,13 @@ class TestMakeSequentialAntimony(unittest.TestCase):
     def compareStepResponse(self, model: str)-> bool:
         # Return False if couldn't do the comparison
         analyzer = SISOAnalyzer(model)
+        step_size = analyzer.original_roadrunner[analyzer.input_name]
         try:
             analyzer.original_roadrunner.steadyState()
         except Exception:
             return False
-        simulated_output = analyzer.original_roadrunner[analyzer.output_name]
+        simulated_output = analyzer.original_roadrunner[analyzer.output_name] / step_size
         #
-        step_size = 1.0
         step_response = analyzer.calculateStepResponse(step_size)
         self.assertIsInstance(step_response, float)
         self.assertAlmostEqual(simulated_output, step_response, places=5)
