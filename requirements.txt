@@ -1,7 +1,7 @@
 jupyterlab
 matplotlib
 scipy
-nose2
+nose2[coverage_plugin]
 numpy
 pandas
 pip
