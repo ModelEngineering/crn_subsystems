@@ -8,7 +8,7 @@ import sympy as sp  # type: ignore
 IGNORE_TEST = False
 IS_PLOT = False
 
-class TestGenerateCrn(unittest.TestCase):
+class TestFunction(unittest.TestCase):
 
     def setUp(self):
         pass
