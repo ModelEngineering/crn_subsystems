@@ -4,6 +4,7 @@ from src.model import Model
 
 import numpy as np
 import pandas as pd  # type: ignore
+from typing import Dict
 
 
 class Jacobian(object):
@@ -15,7 +16,18 @@ class Jacobian(object):
             model (Model): CRN Model
         """
         self.model = model
-        self.jacobian_df = self._makeJacobianDf()
+
+    def copy(self) -> 'Jacobian':
+        """Creates a copy of the Jacobian object.
+
+        Returns:
+            Jacobian: Copy of the Jacobian object
+        """
+        return Jacobian(self.model)
+
+    @property
+    def jacobian_df(self) -> pd.DataFrame:
+        return self._makeJacobianDf()
 
     def _makeJacobianDf(self) -> pd.DataFrame:
         """Get the Jacobian DataFrame of the subsystem at steady state.
@@ -51,8 +63,11 @@ class Jacobian(object):
         eigenvalues = np.linalg.eigvals(jacobian_mat)
         return eigenvalues
     
-    def calculateStepResponse(self) -> pd.DataFrame:
+    def calculateStepResponse(self, input_dct: Dict[str, float]) -> pd.DataFrame:
         """Compute the step response of the subsystem.
+
+        Args:
+            input_dct (Dict[str, float]): Input species and their step values
 
         Returns:
             pd.DataFrame: Step response data

@@ -77,7 +77,7 @@ class Model(object):
                         return
                     if not species.getConstant():
                         # Replace with dummy kinetic species
-                        self._setConstantSpecies(sbml_model, node_name)
+                        self.setConstantSpecies(sbml_model, node_name)
                     return
             else:
                 for i in range(node.getNumChildren()):
@@ -101,7 +101,7 @@ class Model(object):
         for i in range(sbml_model.getNumSpecies()):
             species = sbml_model.getSpecies(i)
             if not species.getId() in self.species_names:
-                self._setConstantSpecies(new_sbml_model, species.getId())
+                self.setConstantSpecies(new_sbml_model, species.getId())
         # Add reactions
         for i in range(sbml_model.getNumReactions()):
             reaction = sbml_model.getReaction(i)
@@ -113,19 +113,20 @@ class Model(object):
                     reactant = reaction.getReactant(j)
                     if reactant.getSpecies() not in self.species_names:
                         species_name = reactant.getSpecies()
-                        self._setConstantSpecies(new_sbml_model, species_name)
+                        self.setConstantSpecies(new_sbml_model, species_name)
                 # Edit products
                 for j in range(reaction.getNumProducts()):
                     product = reaction.getProduct(j)
                     if product.getSpecies() not in self.species_names:
                         species_name = product.getSpecies()
-                        self._setConstantSpecies(new_sbml_model, species_name)
+                        self.setConstantSpecies(new_sbml_model, species_name)
                 # Update species in kinetic law
                 self._updateSpeciesInKineticLaw(new_sbml_model, reaction)
         #
         return new_sbml_model
     
-    def _setConstantSpecies(self, sbml_model: libsbml.Model, species_name: List[str]):
+    def setConstantSpecies(self, sbml_model: libsbml.Model, species_name: List[str],
+            value: float=0.0):
         """Set specified species as constant in the SBML model.
 
         Args:
@@ -135,7 +136,7 @@ class Model(object):
         species = sbml_model.getSpecies(species_name)
         species.setConstant(True)
         species.setBoundaryCondition(True)
-        species.setInitialConcentration(0.0)
+        species.setInitialConcentration(value)
 
     @staticmethod 
     def _getSpeciesFromKineticLaw(reaction: libsbml.Reaction, model: libsbml.Model) -> list[str]:

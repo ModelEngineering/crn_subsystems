@@ -97,4 +97,24 @@ class Subsystem(object):
         """
         J = self.model.roadrunner.getFullJacobian()
         eigvals = np.linalg.eigvals(J)
-        return eigvals  
+        return eigvals
+    
+    def union(self, other: 'Subsystem') -> 'Subsystem':
+        """Create a new Subsystem that is the union of this and another Subsystem.
+
+        Args:
+            other (Subsystem): Another Subsystem
+        Returns:
+            Subsystem: New Subsystem representing the union
+        """
+        raise NotImplementedError("union is not implemented yet.")
+    
+    def difference(self, other: 'Subsystem') -> 'Subsystem':
+        """Create a new Subsystem that is the difference of this and another Subsystem.
+
+        Args:
+            other (Subsystem): Another Subsystem
+        Returns:
+            Subsystem: New Subsystem representing the difference    
+        """
+        raise NotImplementedError("difference is not implemented yet.")

@@ -60,6 +60,40 @@ class TestFunction(unittest.TestCase):
                 if eig.real > 0:
                     import pdb; pdb.set_trace()
                     pass
+    
+    def testMultipleInputs(self):
+        if IGNORE_TEST:
+            return
+        NUM_SPECIES = 10
+        for _ in range(10):
+            input_species_indices = np.random.choice(range(1, NUM_SPECIES+1),
+                    size=np.random.randint(1,4), replace=False).tolist()
+            model = makeLtiCrn(num_species=NUM_SPECIES,
+                    num_reaction=10,
+                    num_products_bounds=(1, 5),
+                    kinetic_constant_bounds= (0.1, 1),
+                    stoichiometry_bounds=(1, 3),
+                    boundary_species_indices=input_species_indices)
+            for input_idx in input_species_indices:
+                input_species_name = f"S{input_idx}_"
+                self.assertIn(f"${input_species_name}", model)
+    
+    def testStartSpeciesIndex(self):
+        if IGNORE_TEST:
+            return
+        NUM_SPECIES = 10
+        input_species_indices = np.random.choice(range(1, NUM_SPECIES+1),
+                size=np.random.randint(1,4), replace=False).tolist()
+        model = makeLtiCrn(num_species=NUM_SPECIES,
+                num_reaction=10,
+                num_products_bounds=(1, 5),
+                kinetic_constant_bounds= (0.1, 1),
+                stoichiometry_bounds=(1, 3),
+                boundary_species_indices=input_species_indices,
+                starting_species_index=50)
+        for idx in range(NUM_SPECIES):
+            species_name = f"S{idx+50}_"
+            self.assertIn(species_name, model)
 
 
 if __name__ == '__main__':
