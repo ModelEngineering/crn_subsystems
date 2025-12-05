@@ -35,15 +35,26 @@ class Model(object):
         if species_names is None:
             species_names = [sbml_model.getSpecies(i).getId()
                     for i in range(sbml_model.getNumSpecies())]
-        self.species_names = species_names
+        self.species_names = list(species_names)
+        self.num_species = len(self.species_names)
+        self.species_names.sort()
         if reaction_names is None:
             reaction_names = [sbml_model.getReaction(i).getId()
                     for i in range(sbml_model.getNumReactions())]
-        self.reaction_names = reaction_names 
+        self.reaction_names = list(reaction_names)
+        self.reaction_names.sort()
+        self.num_reactions = len(self.reaction_names)
         # Update the SBML model
         self.sbml_model = self._makeConstrainedSBMLModel(sbml_model)
         self.antimony_str = self.makeAntimony()
         self.roadrunner = te.loada(self.antimony_str)
+        sbml_str = self.roadrunner.getSBML()
+        reader = libsbml.SBMLReader()
+        document = reader.readSBMLFromString(sbml_str)
+        self.libsbml_model = document.getModel()
+        self.parameter_dct = {self.libsbml_model.getParameter(i).getId():
+                self.libsbml_model.getParameter(i).getValue()
+                for i in range(self.libsbml_model.getNumParameters())}
 
     @staticmethod
     def _makeSpecies(sbml_model: libsbml.Model, species_name: str,

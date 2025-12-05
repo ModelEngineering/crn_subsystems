@@ -1,6 +1,7 @@
 """Constructs and manipulates Jacobians"""
 
 from src.model import Model
+from src.symbolic_jacobian_maker import SymbolicJacobianMaker  # type: ignore
 
 import numpy as np
 import pandas as pd  # type: ignore
@@ -13,7 +14,7 @@ class Jacobian(object):
         """Initializes Jacobian object.
 
         Args:
-            model (Model): CRN Model
+            model (Model): CRN Model. Assumes that input species are not fixed, boundaries.
         """
         self.model = model
 
@@ -27,16 +28,6 @@ class Jacobian(object):
 
     @property
     def jacobian_df(self) -> pd.DataFrame:
-        return self._makeJacobianDf()
-
-    def _makeJacobianDf(self) -> pd.DataFrame:
-        """Get the Jacobian DataFrame of the subsystem at steady state.
-
-        Returns:
-            pd.DataFrame: Jacobian DataFrame
-                rows: species names
-                columns: species names
-        """
         jacobian_arr = self.model.roadrunner.getFullJacobian()
         species_names = jacobian_arr.rownames
         df = pd.DataFrame(jacobian_arr, columns=species_names, index=species_names)

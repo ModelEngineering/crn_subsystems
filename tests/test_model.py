@@ -32,6 +32,16 @@ class TestModel(unittest.TestCase):
     def setUp(self):
         self.model = Model(MODEL, species_names=SPECIES_NAMES,
                 reaction_names=REACTION_NAMES)
+        
+    def test_parameter_dct(self):
+        if IGNORE_TEST:
+            return
+        parameter_dct = self.model.parameter_dct
+        self.assertIn("k1", parameter_dct)
+        self.assertIn("k3", parameter_dct)
+        self.assertIn("k2", parameter_dct.keys())
+        self.assertEqual(parameter_dct["k1"], 0.1)
+        self.assertEqual(parameter_dct["k3"], 0.3)
 
     def test_species_names(self):
         if IGNORE_TEST:

@@ -8,6 +8,7 @@ Conventions for Antimony models.
 
 
 from src.symbolic_jacobian_maker import SymbolicJacobianMaker
+from src.model import Model  # type: ignore
 
 from collections import namedtuple
 import matplotlib.pyplot as plt  # type: ignore
@@ -53,8 +54,8 @@ class SISOAnalyzer(object):
         # recalculation of jacobian matrices and kinetic_constant_dct
         self.original_antimony_str = antimony_str
         self.antimony_str = antimony_str.replace(f"${input_name}", f"{input_name}")  # Remove boundary marker for Tellurium
-        self.roadrunner = te.loada(self.antimony_str)
-        self.original_roadrunner = te.loada(self.original_antimony_str)
+        self.model = Model(self.antimony_str)
+        self.original_model = Model(self.original_antimony_str)
         self.input_name = input_name
         # Initialize other properties
         self.initialize()
@@ -67,7 +68,7 @@ class SISOAnalyzer(object):
 
     def initialize(self) -> None:
         """Initializes attributes in a consistent way"""
-        maker = SymbolicJacobianMaker(self.antimony_str)
+        maker = SymbolicJacobianMaker(self.model)
         maker.initialize()
         # Numeric Jacobian DataFrame
         jacobian_mat = maker.jacobian_mat
@@ -87,7 +88,7 @@ class SISOAnalyzer(object):
         self.jacobian_smat = maker.jacobian_smat
         self.b_smat = maker.b_smat
         self.kinetic_constant_dct = maker.kinetic_constant_dct
-        self.species_names = maker.species_names
+        self.species_names = self.model.species_names
         self.num_species = len(self.species_names)
         assert(np.all(np.array(self.species_names) == np.array(self.jacobian_df.columns)))
 
@@ -100,7 +101,7 @@ class SISOAnalyzer(object):
         Tuple[str, str]
             (input_name, output_name)
         """
-        candidate_names = self.roadrunner.getExtendedStoichiometryMatrix().rownames
+        candidate_names = self.model.roadrunner.getExtendedStoichiometryMatrix().rownames
         if not self.input_name in candidate_names:
             raise ValueError(f"Input species {self.input_name} not found in model species: {candidate_names}")
         if proposed_output_name == NULL_SPECIES_NAME:

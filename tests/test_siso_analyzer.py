@@ -452,12 +452,12 @@ class TestMakeSequentialAntimony(unittest.TestCase):
     def compareStepResponse(self, model: str)-> bool:
         # Return False if couldn't do the comparison
         analyzer = SISOAnalyzer(model)
-        step_size = analyzer.original_roadrunner[analyzer.input_name]
+        step_size = analyzer.original_model.roadrunner[analyzer.input_name]
         try:
-            analyzer.original_roadrunner.steadyState()
+            analyzer.original_model.roadrunner.steadyState()
         except Exception:
             return False
-        simulated_output = analyzer.original_roadrunner[analyzer.output_name] / step_size
+        simulated_output = analyzer.original_model.roadrunner[analyzer.output_name] / step_size
         #
         step_response = analyzer.calculateStepResponse(step_size)
         self.assertIsInstance(step_response, float)
@@ -485,9 +485,9 @@ class TestMakeSequentialAntimony(unittest.TestCase):
         if IGNORE_TEST:
             return
         analyzer = SISOAnalyzer(MODEL)
-        eigenvalueIds = analyzer.roadrunner.getEigenValueIds()
+        eigenvalueIds = analyzer.model.roadrunner.getEigenValueIds()
         rr_eigenvalues = np.array(
-                [analyzer.roadrunner.getValue(eid) for eid in eigenvalueIds
+                [analyzer.model.roadrunner.getValue(eid) for eid in eigenvalueIds
                 if "eigen(" in eid])
         rr_eigenvalues = -np.sort(-rr_eigenvalues)
         eigenvalues = analyzer.calculateEigenvalues()
