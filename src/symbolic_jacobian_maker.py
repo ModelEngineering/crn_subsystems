@@ -147,33 +147,27 @@ class SymbolicJacobianMaker(object):
         for icol in range(self.model.num_species):  # Possible kinetic species
             species_name = self.model.species_names[icol]
             derivative = derivative_dct[species_name]
-            # Process reactants
-            for ireactant in range(num_reactants):
-                reactant = reaction.getReactant(ireactant)
-                reactant_name = reactant.getSpecies()
-                reactant_stoich = reactant.getStoichiometry()
-                reactant_idx = self._getSpeciesIndex(reactant_name)
-                A_smat[reactant_idx, icol] -= reactant_stoich * derivative
-            for iproduct in range(reaction.getNumProducts()):
-                product = reaction.getProduct(iproduct)
-                product_name = product.getSpecies()
-                product_stoich = product.getStoichiometry()
-                product_idx = self._getSpeciesIndex(product_name)
-                A_smat[product_idx, icol] += product_stoich * derivative
-        # Handle case of 0 derivatives
-        if is_constant:
-            for ireactant in range(num_reactants):
-                reactant = reaction.getReactant(ireactant)
-                reactant_name = reactant.getSpecies()
-                reactant_stoich = reactant.getStoichiometry()
-                reactant_idx = self._getSpeciesIndex(reactant_name)
-                if is_constant:
-                    b_smat[reactant_idx] -= reactant_stoich * kinetic_law_expr
-            for iproduct in range(reaction.getNumProducts()):
-                product = reaction.getProduct(iproduct)
-                product_name = product.getSpecies()
-                product_stoich = product.getStoichiometry()
-                product_idx = self._getSpeciesIndex(product_name)
+        # Process reactants
+        for ireactant in range(num_reactants):
+            reactant = reaction.getReactant(ireactant)
+            reactant_name = reactant.getSpecies()
+            reactant_stoich = reactant.getStoichiometry()
+            reactant_idx = self._getSpeciesIndex(reactant_name)
+            for icol in range(self.model.num_species):  # Possible kinetic species
+                species_name = self.model.species_names[icol]
+                A_smat[reactant_idx, icol] -= reactant_stoich * derivative_dct[species_name]
+            if is_constant:
+                b_smat[reactant_idx] -= reactant_stoich * kinetic_law_expr
+        # Process products
+        for iproduct in range(reaction.getNumProducts()):
+            product = reaction.getProduct(iproduct)
+            product_name = product.getSpecies()
+            product_stoich = product.getStoichiometry()
+            product_idx = self._getSpeciesIndex(product_name)
+            for icol in range(self.model.num_species):  # Possible kinetic species
+                species_name = self.model.species_names[icol]
+                A_smat[product_idx, icol] += product_stoich * derivative_dct[species_name]
+            if is_constant:
                 b_smat[product_idx] += product_stoich * kinetic_law_expr
         #
         return ReactionSymbolicJacobian(A_smat=A_smat, b_smat=b_smat)

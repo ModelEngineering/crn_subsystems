@@ -8,8 +8,6 @@ import numpy as np
 import sympy as sp  # type: ignore
 from typing import Dict, Optional
 
-# TODO: More complex kinetics, such as Michaelis-Menten and Hill functions
-
 IGNORE_TEST = False
 
 MODEL1 = """
@@ -69,6 +67,22 @@ MODEL2 = """
         kd_2 = 11.3991
         end
 """ 
+
+
+MODEL3 = """
+J1: -> S1 + 2 S2; k1
+J2: S2 + 2 S1 -> 2 S3 + S1; k2*S2*S1*S1
+J3: S2 -> ; k3*S2
+J4: S3 -> ; k4*S2
+J5: S3 -> 3 S2 + S1; k2*S3
+S1 = 10
+S2 = 0
+S3 = 0
+k1 = 1
+k2 = 2
+k3 = 3
+k4 = 4
+"""
 
 class TestSymbolicJacobianMaker(unittest.TestCase):
 
@@ -212,6 +226,26 @@ class TestSymbolicJacobianMaker(unittest.TestCase):
                 expected_col_idx = expected_species_names.index(col_species_name)
                 self.assertAlmostEqual(float(jacobian_mat[row_idx, col_idx]),
                         float(expected_jacobian_mat[expected_row_idx, expected_col_idx]))
+    
+    def testMakeSymbolicJacobianNonLTI(self):
+        if IGNORE_TEST:
+            return
+        # J2: S2 + 2 S1 -> 2 S3 + S1; k2*S2*S1*S1
+        model = Model(MODEL3)
+        maker = SymbolicJacobianMaker(model)
+        reaction_dct = self.getReactions(maker=maker)
+        reaction = reaction_dct["J2"]
+        result_j2 = self.maker._makeReactionLti(reaction)
+        S1, S2, k2 = sp.symbols("S1 S2 k2")
+        expected_A_smat = sp.Matrix([
+                [-2*S1*S2*k2, -1*S1**2*k2, 0],
+                [-2*S1*S2*k2, -1*S1**2*k2, 0],
+                [4*S1*S2*k2, 2*S1**2*k2, 0]])
+        expected_b_smat = sp.Matrix([[0],
+                                        [0],
+                                        [0]])
+        self.assertTrue(result_j2.A_smat.equals(expected_A_smat))
+        self.assertTrue(result_j2.b_smat.equals(expected_b_smat))
     
     def testMakeSymbolicJacobianSmall(self):
         if IGNORE_TEST:
