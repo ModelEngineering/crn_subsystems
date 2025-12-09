@@ -7,9 +7,9 @@ Conventions for Antimony models.
 """
 
 
-from src.symbolic_jacobian_maker import SymbolicJacobianMaker
 from src.model import Model  # type: ignore
 from src.jacobian import Jacobian  # type: ignore
+from src.subsystem import Subsystem  # type: ignore
 
 from collections import namedtuple
 import matplotlib.pyplot as plt  # type: ignore
@@ -36,7 +36,8 @@ MakeSymbolicAMatResult = namedtuple("MakeSymbolicAMatResult", ["A_sym", "rate_dc
 class SISOAnalyzer(object):
     def __init__(self, antimony_str: str,
             input_name:str = DEFAULT_INPUT_NAME,
-            output_name:str = NULL_SPECIES_NAME) -> None:
+            output_name:str = NULL_SPECIES_NAME,
+            system_name: str = "") -> None:
         """
         Initializes the NetworkAnalyzer with an optional Antimony model string.
 
@@ -46,11 +47,13 @@ class SISOAnalyzer(object):
             Antimony model string to initialize the NetworkAnalyzer
         input_name: Species name to use as input (default: S1)
         output_name: Species name to use as output (default: largest numbered species)
+        system_name: Name of the system (default: "")
 
         Returns:
         --------
         None
         """
+        # FIXME: Use Subsystem class
         # Initialize to the correct type. Changing self.antimony_str triggers
         # recalculation of jacobian matrices and kinetic_constant_dct
         self.original_antimony_str = antimony_str
@@ -60,48 +63,27 @@ class SISOAnalyzer(object):
         self.original_model = Model(self.original_antimony_str)
         self.input_name = input_name
         # Initialize other properties
-        self.initialize()
+        self.jacobian = Jacobian(self.model)
+        self.jacobian_df = self.jacobian.jacobian_df
+        self.jacobian_smat = self.jacobian.jacobian_smat
+        self.b_smat = self.jacobian.b_smat
+        self.kinetic_constant_dct = self.model.kinetic_constant_dct
+        self.species_names = self.model.species_names
+        self.num_species = self.model.num_species
         self.output_name = self._updateOutputName(output_name)
-        self.input_species_index = self.species_names.index(self.input_name)
-        self.output_species_index = self.species_names.index(self.output_name)
+        self.input_species_index = self.model.getSpeciesIndex(self.input_name)
+        self.output_species_index = self.model.getSpeciesIndex(self.output_name)
         # The following are calculaed via deferred evaluation after initialize
         self._transfer_function_smat = NULL_TRANSFER_FUNCTION_MATRIX
         self._transfer_function_expr = NULL_TRANSFER_FUNCTION_EXPR
 
-    def initialize(self) -> None:
-        """Initializes attributes in a consistent way"""
-        maker = SymbolicJacobianMaker(self.model)
-        maker.initialize()
-        # Numeric Jacobian DataFrame
-        jacobian_mat = self.jacobian.jacobian_df.values
-        column_names = cast(list[str], jacobian_mat.colnames)  # type: ignore
-        sorted_column_idxs = np.argsort(column_names)
-        sorted_species_names = [column_names[i] for i in sorted_column_idxs]
-        arrs = []
-        for idx, name in enumerate(sorted_species_names):
-            new_idx = sorted_column_idxs[idx]
-            arr = jacobian_mat[new_idx, sorted_column_idxs]
-            arrs.append(arr)
-        sorted_arr = np.array(arrs)
-        self.jacobian_df = pd.DataFrame(sorted_arr,
-                            index=sorted_species_names,
-                            columns=sorted_species_names)
-        # Other attributes
-        self.jacobian_smat = maker.jacobian_smat
-        self.b_smat = maker.b_smat
-        self.kinetic_constant_dct = self.model.kinetic_constant_dct
-        self.species_names = self.model.species_names
-        self.num_species = len(self.species_names)
-        assert(np.all(np.array(self.species_names) == np.array(self.jacobian_df.columns)))
-
     def _updateOutputName(self, proposed_output_name) -> str:
         """
-        Updates the input and output species names.
+        Updates the output species name.
 
         Returns:
         --------
-        Tuple[str, str]
-            (input_name, output_name)
+            output_name
         """
         candidate_names = self.model.roadrunner.getExtendedStoichiometryMatrix().rownames
         if not self.input_name in candidate_names:
@@ -274,6 +256,7 @@ class SISOAnalyzer(object):
         plt.legend(["Comparison", "Ideal"])
         plt.show()
 
+    # TODO: delete. Use subsystem
     def calculateStepResponse(self, step_size: float = 1.0) -> float:
         """
         Calculates the step response using steady state analysis by setting all derivatives to zero.
@@ -298,14 +281,3 @@ class SISOAnalyzer(object):
             pass
         step_response = x_ss[self.output_species_index] / step_size  # type: ignore
         return step_response
-    
-    def calculateEigenvalues(self) -> np.ndarray:
-        """
-        Calculates the eigenvalues of the Jacobian matrix.
-
-        Returns:
-            np.ndarray: Array of eigenvalues in descending order.
-        """
-        A_mat = np.array(self.jacobian_df.values, dtype=float)
-        eigenvalues = np.linalg.eigvals(A_mat)
-        return -np.sort(-eigenvalues)

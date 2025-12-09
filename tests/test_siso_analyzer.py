@@ -449,6 +449,7 @@ class TestMakeSequentialAntimony(unittest.TestCase):
         if IS_PLOT:
             analyzer.plotTransferFunctionValidation()
 
+    # TODO: Integrate with subsystem
     def compareStepResponse(self, model: str)-> bool:
         # Return False if couldn't do the comparison
         analyzer = SISOAnalyzer(model)
@@ -480,21 +481,6 @@ class TestMakeSequentialAntimony(unittest.TestCase):
                     stoichiometry_bounds=(1, 3))
             if IS_PLOT and not self.compareStepResponse(model):
                 print("Could not compare step response for generated model")
-
-    def testCalculateEigenvalues(self):
-        if IGNORE_TEST:
-            return
-        analyzer = SISOAnalyzer(MODEL)
-        eigenvalueIds = analyzer.model.roadrunner.getEigenValueIds()
-        rr_eigenvalues = np.array(
-                [analyzer.model.roadrunner.getValue(eid) for eid in eigenvalueIds
-                if "eigen(" in eid])
-        rr_eigenvalues = -np.sort(-rr_eigenvalues)
-        eigenvalues = analyzer.calculateEigenvalues()
-        self.assertIsInstance(eigenvalues, np.ndarray)
-        self.assertEqual(len(eigenvalues), 3)
-        self.assertTrue(np.all(np.diff(eigenvalues) <= 0))  # Check descending order
-        self.assertTrue(np.allclose(eigenvalues, rr_eigenvalues))
 
 
 if __name__ == '__main__':
