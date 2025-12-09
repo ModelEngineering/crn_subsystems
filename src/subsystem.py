@@ -53,12 +53,12 @@ class Subsystem(object):
         eigenvalues = np.linalg.eigvals(jacobian_mat)
         return eigenvalues
     
-    def calculateNumericDiscs(self) -> Tuple[np.ndarray, np.ndarray]:
+    def calculateNumericDiscs(self) -> np.ndarray:
         """
         Calculates Gershgorinn discs for the continuous-time eigenvalues.
 
         Returns:
-            Tuple[np.ndarray, np.ndarray]: Two 1D arrays containing the lower and upper bounds of
+            np.ndarray: A matrix containing the lower and upper bounds of
                 continuous-time Girgorian discs
         """
         matrix = self.jacobian.jacobian_df.to_numpy()
@@ -73,7 +73,7 @@ class Subsystem(object):
         lower_bounds = diagonal - off_diagonal_sums
         upper_bounds = diagonal + off_diagonal_sums
         #
-        return lower_bounds, upper_bounds
+        return np.hstack([lower_bounds, upper_bounds]).reshape(2, self.model.num_species).T
     
     def isStable(self) -> bool:
         """
@@ -85,12 +85,12 @@ class Subsystem(object):
         eigenvalues = self.calculateEigenvalues()
         return all(np.real(eig) < 0 for eig in eigenvalues)
 
-    def calculateSymbolicDiscs(self) -> Tuple[sp.Matrix, sp.Matrix]:
+    def calculateSymbolicDiscs(self) -> sp.Matrix:
         """
         Calculates symbolic Gershgorinn discs for the continuous-time eigenvalues.
 
         Returns:
-            Tuple[sp.Matrix, sp.Matrix]: Two 1D arrays containing the lower and upper bounds of
+            sp.Matrix: A matrix containing the lower and upper bounds of
                 continuous-time Girgorian discs
         """
         matrix = self.jacobian.jacobian_smat
@@ -107,7 +107,9 @@ class Subsystem(object):
         lower_bounds = diagonal - off_diagonal_sums
         upper_bounds = diagonal + off_diagonal_sums
         #
-        return lower_bounds, upper_bounds
+        # FIXME: wrong shape
+        smat = sp.Matrix.hstack(lower_bounds, upper_bounds).reshape(2, self.model.num_species).T
+        return smat
 
     def calculateNumericStepResponse(self, input_species_name: str,
             step_size: float = 1.0) -> pd.Series:

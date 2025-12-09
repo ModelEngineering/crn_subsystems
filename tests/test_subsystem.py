@@ -38,21 +38,30 @@ class TestSubsyste(unittest.TestCase):
         self.assertTrue(all(trues))
 
     def testCalculateSymbolicDiscs(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         subsystem = Subsystem(MODEL_SEQUENTIAL)
-        symbolic_discs = subsystem.calculateSymbolicDiscs()
-        self.assertIsInstance(symbolic_discs, tuple)
-        self.assertEqual(len(symbolic_discs), 2)
-        self.assertIsInstance(symbolic_discs[0], sp.Matrix)
-        self.assertIsInstance(symbolic_discs[1], sp.Matrix)
-        self.assertEqual(symbolic_discs[0].shape, (1, subsystem.model.num_species))
-        self.assertEqual(symbolic_discs[1].shape, (1, subsystem.model.num_species))
+        disc_smat = subsystem.calculateSymbolicDiscs()
+        self.assertIsInstance(disc_smat, sp.Matrix)
+        self.assertEqual(disc_smat.shape, (subsystem.model.num_species, 2))
+        self.assertEqual(disc_smat.shape, (subsystem.model.num_species, 2))
         k1, k2, k3 = sp.symbols('k1 k2 k3')
         expected_width = 2.0*sp.Matrix(
                 [[0, sp.Abs(k1), sp.Abs(k2), sp.Abs(k3)]])
-        width = symbolic_discs[1] - symbolic_discs[0]
-        self.assertTrue(width == expected_width)
+        width = sp.simplify(disc_smat[:, 1] - disc_smat[:, 0]) # type: ignore
+        self.assertTrue(width.T == expected_width)
+    
+    def testCalculateNumericDiscs(self):
+        if IGNORE_TEST:
+            return
+        subsystem = Subsystem(MODEL_SEQUENTIAL)
+        disc_mat = subsystem.calculateNumericDiscs()
+        disc_smat = subsystem.calculateSymbolicDiscs()
+        expected_disc_mat = disc_smat.subs(subsystem.model.kinetic_constant_dct)
+        self.assertTrue(np.allclose(
+            disc_mat.astype(np.float64),
+            np.array(expected_disc_mat).astype(np.float64)
+        ))
 
 
 if __name__ == '__main__':
