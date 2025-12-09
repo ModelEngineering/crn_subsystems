@@ -12,6 +12,8 @@ DUMMY_KINETIC_SPECIES = "DUMMY_KINETIC_SPECIES"
 
 
 Reaction = namedtuple('Reaction', ['name', 'reactants', 'products', 'kinetic_species'])
+ReactionDescription = namedtuple("ReactionDescription",
+        ["reaction_name", "reactant_name", "kinetic_constant_name", "product_stoichiometry_dct"]) 
 
 
 class Model(object):
@@ -55,6 +57,36 @@ class Model(object):
         self.parameter_dct = {self.libsbml_model.getParameter(i).getId():
                 self.libsbml_model.getParameter(i).getValue()
                 for i in range(self.libsbml_model.getNumParameters())}
+        self.kinetic_constant_dct = self._makeKineticConstantDct()
+        
+    def getSpeciesIndex(self, species_name: str) -> int:
+        """Get the index of a species in the species_names list.
+
+        Args:
+            species_name (str): Species name    
+        Returns:
+            int: Index of the species
+        """
+        try:
+            idx = self.species_names.index(species_name)
+        except ValueError:
+            raise ValueError(f"Species {species_name} not found in species names")
+        return idx
+    
+    def getSpeciesName(self, index: int) -> str:
+        """Get the species name at the specified index.
+
+        Args:
+            index (int): Index of the species
+
+        Returns:
+            str: Species name
+        """
+        try:
+            species_name = self.species_names[index]
+        except IndexError:
+            raise IndexError(f"Index {index} out of range for species names")
+        return species_name
 
     @staticmethod
     def _makeSpecies(sbml_model: libsbml.Model, species_name: str,
@@ -234,3 +266,15 @@ class Model(object):
         roadrunner = te.loadSBMLModel(sbml_str)
         antimony_str = roadrunner.getAntimony()
         return antimony_str
+    
+    def _makeKineticConstantDct(self)->Dict[str, float]:
+        kinetic_constant_dct = {}
+        # Get parameters and create symbols and dictionary
+        for i in range(self.libsbml_model.getNumParameters()):
+            param = self.libsbml_model.getParameter(i)
+            param_id = param.getId()
+            if param_id in self.species_names:
+                continue
+            param_value = param.getValue()
+            kinetic_constant_dct[param_id] = param_value
+        return kinetic_constant_dct

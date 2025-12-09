@@ -91,19 +91,16 @@ def makeLtiCrn(
     antimony_lines.append("# Random Chemical Reaction Network")
     antimony_lines.append("# Generated with specified constraints\n")
     antimony_lines.append("model random_crn()\n")
+
+    # Define the species
+    antimony_lines.append("  # Species")
+    for i in range(starting_species_index, starting_species_index + num_species):
+        species_name = makeSpeciesName(i)
+        antimony_lines.append(f"  species {species_name};")
+    antimony_lines.append("")
     
     # Track existing species and rate constants
     rate_constants = []
-    
-    """ # S1 is a boundary species and k1 is its initial value
-    k1 = np.random.uniform(kinetic_constant_bounds[0], kinetic_constant_bounds[1])
-    rate_constants.append((f"{rate_constant_prefix}1", k1))
-    if is_input_boundary:
-        prefix = "$"
-    else:
-        prefix = ""
-    antimony_lines.append(f"  -> {prefix}{input_species_name}; {rate_constant_prefix}1")
-    """
     for input_species_name in input_species_names:
         k_name = f"{rate_constant_prefix}{extractSpeciesNumber(input_species_name)}"
         rate_constants.append((k_name, 1.0))

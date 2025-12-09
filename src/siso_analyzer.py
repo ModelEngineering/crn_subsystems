@@ -9,6 +9,7 @@ Conventions for Antimony models.
 
 from src.symbolic_jacobian_maker import SymbolicJacobianMaker
 from src.model import Model  # type: ignore
+from src.jacobian import Jacobian  # type: ignore
 
 from collections import namedtuple
 import matplotlib.pyplot as plt  # type: ignore
@@ -55,6 +56,7 @@ class SISOAnalyzer(object):
         self.original_antimony_str = antimony_str
         self.antimony_str = antimony_str.replace(f"${input_name}", f"{input_name}")  # Remove boundary marker for Tellurium
         self.model = Model(self.antimony_str)
+        self.jacobian = Jacobian(self.model)
         self.original_model = Model(self.original_antimony_str)
         self.input_name = input_name
         # Initialize other properties
@@ -71,7 +73,7 @@ class SISOAnalyzer(object):
         maker = SymbolicJacobianMaker(self.model)
         maker.initialize()
         # Numeric Jacobian DataFrame
-        jacobian_mat = maker.jacobian_mat
+        jacobian_mat = self.jacobian.jacobian_df.values
         column_names = cast(list[str], jacobian_mat.colnames)  # type: ignore
         sorted_column_idxs = np.argsort(column_names)
         sorted_species_names = [column_names[i] for i in sorted_column_idxs]
@@ -87,7 +89,7 @@ class SISOAnalyzer(object):
         # Other attributes
         self.jacobian_smat = maker.jacobian_smat
         self.b_smat = maker.b_smat
-        self.kinetic_constant_dct = maker.kinetic_constant_dct
+        self.kinetic_constant_dct = self.model.kinetic_constant_dct
         self.species_names = self.model.species_names
         self.num_species = len(self.species_names)
         assert(np.all(np.array(self.species_names) == np.array(self.jacobian_df.columns)))

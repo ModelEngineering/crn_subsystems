@@ -42,6 +42,20 @@ class TestModel(unittest.TestCase):
         self.assertIn("k2", parameter_dct.keys())
         self.assertEqual(parameter_dct["k1"], 0.1)
         self.assertEqual(parameter_dct["k3"], 0.3)
+    
+    def testMakeKineticConstantDct(self):
+        if IGNORE_TEST:
+            return
+        kinetic_constant_dct = self.model.kinetic_constant_dct
+        self.assertIsInstance(kinetic_constant_dct, dict)
+        self.assertEqual(len(kinetic_constant_dct), 3)
+        self.assertIn("k1", kinetic_constant_dct)
+        self.assertIn("k2", kinetic_constant_dct)
+        self.assertIn("k3", kinetic_constant_dct)
+        trues = [kinetic_constant_dct["k1"] == 0.1,
+                kinetic_constant_dct["k2"] == 0.2,
+                kinetic_constant_dct["k3"] == 0.3]
+        self.assertTrue(all(trues))
 
     def test_species_names(self):
         if IGNORE_TEST:
