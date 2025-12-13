@@ -13,8 +13,6 @@ from typing import List, Optional, Tuple, Dict, cast
 
 DEFAULT_SUBSYSTEM_NAME = "subsystem"
 
-# TODO: tests
-
 
 class Subsystem(object):
     '''CRN Subsystem'''
@@ -36,6 +34,7 @@ class Subsystem(object):
         self.subsystem_name = subsystem_name
         self.time = time
         #
+        self.model_str = model_str
         self.model = Model(model_str, species_names=species_names,
                 reaction_names=reaction_names)
         self.jacobian = Jacobian(self.model, time=time)
@@ -107,7 +106,6 @@ class Subsystem(object):
         lower_bounds = diagonal - off_diagonal_sums
         upper_bounds = diagonal + off_diagonal_sums
         #
-        # FIXME: wrong shape
         smat = sp.Matrix.hstack(lower_bounds, upper_bounds).reshape(2, self.model.num_species).T
         return smat
 
@@ -139,7 +137,7 @@ class Subsystem(object):
         step_response_ser = xss_ser[self.output_species_name] / step_size  # type: ignore
         return step_response_ser
     
-    def calculateSymbolicStepResponse(self, species_name: str) -> Dict[str, sp.Expr]:
+    def calculateSymbolicStepResponse(self, input_name: str) -> Dict[str, sp.Expr]:
         """
         Calculates the symbolic step response for the specified input species.
         At steady state, all derivatives are zero and the input_species is stepped by 1 unit.
@@ -148,14 +146,14 @@ class Subsystem(object):
 
 
         Args:
-            species_name (str): Input species name
+            input_name (str): Input species name
 
         Returns:
             pd.DataFrame: Step response data
                 rows: input species
                 columns: output species
         """
-        species_idx = self.model.getSpeciesIndex(species_name)
+        species_idx = self.model.getSpeciesIndex(input_name)
         b_smat = self.jacobian.b_smat
         # Construct the A' matrix and c vector
         Ap_smat = self.jacobian.jacobian_smat.copy()
@@ -165,26 +163,50 @@ class Subsystem(object):
         c_smat = self.jacobian.jacobian_smat[:, species_idx]
         c_smat = sp.Matrix.zeros(self.model.num_species, 1) - c_smat
         # Solve for steady-state
-        x_solns = [sp.Symbol(n) for n in self.model.species_names if n != species_name]
+        x_solns = [sp.Symbol(n) for n in self.model.species_names if n != input_name]
         #x2_ss,x3_ss, x4_ss = sp.symbols("x2_ss,x3_ss, x4_ss")
         #x_ss = sp.Matrix([x2_ss, x3_ss, x4_ss])
         x_ss = sp.Matrix(x_solns)
         symbolic_solution_dct = sp.solve(Ap_smat * x_ss + b_smat - c_smat, x_solns)
         solution_dct = {k.name: v for k, v in symbolic_solution_dct.items()}
-        solution_dct.update({species_name: 1})
+        solution_dct.update({input_name: 1})
         return solution_dct
     
-    def union(self, other: 'Subsystem') -> 'Subsystem':
+    def _checkCompatibility(self, other: 'Subsystem') -> None:
+        """Check if this Subsystem is compatible with another Subsystem.
+
+        Args:
+            other (Subsystem): Another Subsystem 
+        """
+        if self.model_str != other.model_str:
+            raise ValueError("Cannot take union of subsystems with different models.") 
+        if self.time != other.time:
+            raise ValueError("Cannot take union of subsystems with different time settings.")
+    
+    def union(self, other: 'Subsystem', name: Optional[str] = None) -> 'Subsystem':
         """Create a new Subsystem that is the union of this and another Subsystem.
 
         Args:
             other (Subsystem): Another Subsystem
+            name (Optional[str]): Optional name for the new Subsystem
         Returns:
             Subsystem: New Subsystem representing the union
         """
-        raise NotImplementedError("union is not implemented yet.")
+        self._checkCompatibility(other)
+        if name is None:
+            name = f"{self.subsystem_name}_union_{other.subsystem_name}"
+        species_names = list(set(self.model.species_names).union(set(other.model.species_names)))
+        reaction_names = list(set(self.model.reaction_names).union(set(other.model.reaction_names)))
+        # Combine the models
+        return Subsystem(
+            model_str=self.model_str,
+            species_names=species_names,
+            reaction_names=reaction_names,
+            subsystem_name=name,
+            time=self.time
+        )
     
-    def difference(self, other: 'Subsystem') -> 'Subsystem':
+    def difference(self, other: 'Subsystem', name: Optional[str] = None) -> 'Subsystem':
         """Create a new Subsystem that is the difference of this and another Subsystem.
 
         Args:
@@ -192,4 +214,16 @@ class Subsystem(object):
         Returns:
             Subsystem: New Subsystem representing the difference    
         """
-        raise NotImplementedError("difference is not implemented yet.")
+        self._checkCompatibility(other)
+        if name is None:
+            name = f"{self.subsystem_name}_difference_{other.subsystem_name}"
+        species_names = list(set(self.model.species_names).difference(set(other.model.species_names)))
+        reaction_names = list(set(self.model.reaction_names).difference(set(other.model.reaction_names)))
+        # Combine the models
+        return Subsystem(
+            model_str=self.model_str,
+            species_names=species_names,
+            reaction_names=reaction_names,
+            subsystem_name=name,
+            time=self.time
+        )

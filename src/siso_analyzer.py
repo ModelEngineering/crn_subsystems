@@ -6,7 +6,6 @@ Conventions for Antimony models.
 2. Species are named S{num}, where num is the species index starting at 1. S1 is a boundary species.
 """
 
-
 from src.model import Model  # type: ignore
 from src.jacobian import Jacobian  # type: ignore
 from src.subsystem import Subsystem  # type: ignore
@@ -56,6 +55,7 @@ class SISOAnalyzer(object):
         # FIXME: Use Subsystem class
         # Initialize to the correct type. Changing self.antimony_str triggers
         # recalculation of jacobian matrices and kinetic_constant_dct
+        self.name = system_name
         self.original_antimony_str = antimony_str
         self.antimony_str = antimony_str.replace(f"${input_name}", f"{input_name}")  # Remove boundary marker for Tellurium
         self.model = Model(self.antimony_str)

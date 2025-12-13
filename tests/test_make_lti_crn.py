@@ -73,7 +73,7 @@ class TestFunction(unittest.TestCase):
                     num_products_bounds=(1, 5),
                     kinetic_constant_bounds= (0.1, 1),
                     stoichiometry_bounds=(1, 3),
-                    boundary_species_indices=input_species_indices)
+                    input_species_indices=input_species_indices)
             for input_idx in input_species_indices:
                 input_species_name = f"S{input_idx}_"
                 self.assertIn(f"${input_species_name}", model)
@@ -89,7 +89,7 @@ class TestFunction(unittest.TestCase):
                 num_products_bounds=(1, 5),
                 kinetic_constant_bounds= (0.1, 1),
                 stoichiometry_bounds=(1, 3),
-                boundary_species_indices=input_species_indices,
+                input_species_indices=input_species_indices,
                 starting_species_index=50)
         for idx in range(NUM_SPECIES):
             species_name = f"S{idx+50}_"

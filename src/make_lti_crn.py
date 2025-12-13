@@ -31,7 +31,7 @@ def makeLtiCrn(
     species_prefix: str = "S",
     species_suffix: str = "_",
     is_input_boundary: bool = True,
-    boundary_species_indices:  list[int] = [1],
+    input_species_indices:  list[int] = [1],
     starting_species_index: int = 1,
     seed: Optional[int] = None
 ):
@@ -61,7 +61,7 @@ def makeLtiCrn(
         Suffix for naming species: Default is '_'
     is_input_boundary : bool
         If True, species S1 is treated as an input boundary species
-    input_species_indices : Optional[list[int]]
+    input_species_indices:  list[int]
         List of species indices to be treated as input boundary species
     starting_species_index : int
         Starting index for species naming
@@ -78,7 +78,7 @@ def makeLtiCrn(
     def extractSpeciesNumber(species_name: str) -> int:
         return int(species_name[len(species_prefix):-len(species_suffix)])
     ##
-    input_species_names = [makeSpeciesName(i) for i in boundary_species_indices]
+    input_species_names = [makeSpeciesName(i) for i in input_species_indices]
     #
     if seed is not None:
         random.seed(seed)
@@ -91,6 +91,12 @@ def makeLtiCrn(
     antimony_lines.append("# Random Chemical Reaction Network")
     antimony_lines.append("# Generated with specified constraints\n")
     antimony_lines.append("model random_crn()\n")
+    # Initializations
+    rate_constants = []
+    existing_species = [makeSpeciesName(n) for n in range(starting_species_index, starting_species_index + num_species)]
+    candidate_product_species = existing_species[2:]
+    for input_species_name in input_species_names:
+        existing_species.append(input_species_name)
 
     # Define the species
     antimony_lines.append("  # Species")
@@ -99,22 +105,19 @@ def makeLtiCrn(
         antimony_lines.append(f"  species {species_name};")
     antimony_lines.append("")
     
-    # Track existing species and rate constants
-    rate_constants = []
-    for input_species_name in input_species_names:
-        k_name = f"{rate_constant_prefix}{extractSpeciesNumber(input_species_name)}"
-        rate_constants.append((k_name, 1.0))
-        if is_input_boundary:
-            prefix = "$"
-        else:
-            prefix = ""
-        antimony_lines.append(f"  -> {prefix}{input_species_name}; {k_name}")
-    existing_species = [makeSpeciesName(n) for n in range(starting_species_index, starting_species_index + num_species)]
-    candidate_product_species = existing_species[2:]
+    # # Track existing species and rate constants
+    # for input_species_name in input_species_names:
+    #     k_name = f"{rate_constant_prefix}{extractSpeciesNumber(input_species_name)}"
+    #     rate_constants.append((k_name, 1.0))
+    #     if is_input_boundary:
+    #         prefix = "$"
+    #     else:
+    #         prefix = ""
+    #     antimony_lines.append(f"  -> {prefix}{input_species_name}; {k_name}")
     
     # Generate subsequent reactions
     reactants = []
-    for rxn_idx in range(2, num_reaction + 1):
+    for rxn_idx in range(1, num_reaction + 1):
         
         # Pick a random reactant from existing species
         reactant: str = random.choice(existing_species)
@@ -141,14 +144,17 @@ def makeLtiCrn(
         # Build reaction string with spaces between stoichiometry and species
         product_str = " + ".join([f"{s} {sp}" if s > 1 else sp for s, sp in products])
         rate_law = f"{k_name} * {reactant}"
-        antimony_lines.append(f"  {reactant} -> {product_str}; {rate_law}")
+        antimony_lines.append(f"  J{rxn_idx}: {reactant} -> {product_str}; {rate_law}")
 
-    # Ensure that S1 is a reactant in at least one reaction
+    # Ensure that an input species is a reactant in at least one reaction
+    # FIXME: May replace an existing reactant that is also an input species
     for idx, input_species_name in enumerate(input_species_names):
         if input_species_name not in reactants:
             reaction_str = antimony_lines[-(idx+1)]
+            reaction_id = reaction_str.split(":")[0]
             current_species_name = reaction_str.split(" -> ")[0].strip()
-            antimony_lines[-(idx+1)] = reaction_str.replace(current_species_name, input_species_name)
+            new_reaction_str = reaction_str.replace(reaction_id + current_species_name, input_species_name)
+            antimony_lines[-(idx+1)] = new_reaction_str
     
     # Add rate constant definitions
     antimony_lines.append("\n  # Rate constants")
@@ -190,7 +196,7 @@ def makeLtiCrn(
         degradation_lines = []
         for idx, degradation_rate in degradation_dct.items():
             species = species_names[idx]
-            degradation_lines.append(f"  {species} -> ; {rate_constant_prefix}d_{idx} * {species}")
+            degradation_lines.append(f"  JD{idx}: {species} -> ; {rate_constant_prefix}d_{idx} * {species}")
             degradation_lines.append(f"  {rate_constant_prefix}d_{idx} = {degradation_rate:.4f}")
         # Insert degradation reactions before 'end'
         antimony_lines = antimony_str.splitlines()
@@ -203,7 +209,6 @@ def makeLtiCrn(
     jacobian1_arr = rr.getFullJacobian()
     eigenvalues = np.linalg.eigvals(jacobian1_arr)
     if np.any(eigenvalues.real > 0):
-        import pdb; pdb.set_trace()
-        pass
+        raise RuntimeError("Generated CRN is not stable after adding degradation reactions.")
 
     return antimony_str

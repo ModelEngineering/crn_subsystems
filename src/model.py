@@ -4,7 +4,7 @@ from collections import namedtuple
 import pandas as pd  # type: ignore
 import tellurium as te  # type: ignore
 import libsbml  # type: ignore
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 
 DUMMY_REACTANT = "DUMMY_REACTANT"
 DUMMY_PRODUCT = "DUMMY_PRODUCT"
@@ -37,9 +37,9 @@ class Model(object):
         if species_names is None:
             species_names = [sbml_model.getSpecies(i).getId()
                     for i in range(sbml_model.getNumSpecies())]
+            species_names.sort()
         self.species_names = list(species_names)
         self.num_species = len(self.species_names)
-        self.species_names.sort()
         if reaction_names is None:
             reaction_names = [sbml_model.getReaction(i).getId()
                     for i in range(sbml_model.getNumReactions())]
@@ -278,3 +278,16 @@ class Model(object):
             param_value = param.getValue()
             kinetic_constant_dct[param_id] = param_value
         return kinetic_constant_dct
+    
+    def union(self, other_model: Union[str, 'Model']) -> 'Model':
+        """Create a new Model that is the union of this model and another model.
+
+        Args:
+            other_model (Model): Another Model instance
+        Returns:
+            Model: New Model representing the union
+        """
+        if isinstance(other_model, str):
+            other_model = Model(other_model)
+        
+        raise
