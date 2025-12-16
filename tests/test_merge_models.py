@@ -198,7 +198,6 @@ class TestMergeModels(unittest.TestCase):
                     rr_model.getSteadyStateValues())    })
         for model in [MODEL_RANDOM1, MODEL_RANDOM2]:
             rr_sub = te.loada(model)
-            import pdb; pdb.set_trace()
             key = "submodel_1" if model == MODEL_RANDOM1 else "submodel_2"
             for species in rr_sub.getFloatingSpeciesIds():
                 self.assertIn(species, dcts["merged"].index)
