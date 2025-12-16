@@ -1,17 +1,19 @@
 """Merge two libsbml documents into a single model."""
 
 import libsbml  # type: ignore
+import tellurium as te  # type: ignore
+import numpy as np
 from typing import Dict, Set, Union
 
 
-def mergeModels(doc1: libsbml.SBMLDocument,
-        doc2: libsbml.SBMLDocument) -> libsbml.SBMLDocument:
+
+def mergeModels(model1_str: str, model2_str: str) -> str:
     """
     Merge two libsbml documents into a single document containing all species and reactions.
 
     Args:
-        model1: First libsbml SBMLDocument
-        model2: Second libsbml SBMLDocument
+        model1_str: First model
+        model2_str: Second model
 
     Returns:
         libsbml.SBMLDocument: Merged document containing all species and reactions from both models
@@ -21,11 +23,13 @@ def mergeModels(doc1: libsbml.SBMLDocument,
         - Compartments are merged, with doc1 values taking precedence for duplicates
         - Both models should have compatible SBML levels/versions
     """
-    if isinstance(doc1, str):
-        doc1 = libsbml.readSBMLFromString(doc1)
+    rr = te.loadAntimonyModel(model1_str)
+    reader = libsbml.SBMLReader()
+    doc1 = reader.readSBMLFromString(rr.getSBML())
     model1 = doc1.getModel()
-    if isinstance(doc2, str):
-        doc2 = libsbml.readSBMLFromString(doc2)
+    rr = te.loadAntimonyModel(model2_str)
+    reader = libsbml.SBMLReader()
+    doc2 = reader.readSBMLFromString(rr.getSBML())
     model2 = doc2.getModel()
 
     # Create new document with same level/version as doc1
@@ -45,11 +49,10 @@ def mergeModels(doc1: libsbml.SBMLDocument,
     added_reactions: Set[str] = set()
 
     # Merge compartments from both models
-    for idx, model in enumerate([model1, model2]):
-        prefix = ""
+    for model in [model1, model2]:
         for i in range(model.getNumCompartments()):
             comp = model.getCompartment(i)
-            comp_id = f"{prefix}{comp.getId()}"
+            comp_id = comp.getId()
             if comp_id not in added_compartments:
                 new_comp = merged_model.createCompartment()
                 new_comp.setId(comp_id)
@@ -69,11 +72,10 @@ def mergeModels(doc1: libsbml.SBMLDocument,
         added_compartments.add("default")
 
     # Merge species from both models
-    for idx, model in enumerate([model1, model2]):
-        prefix = ""
+    for model in [model1, model2]:
         for i in range(model.getNumSpecies()):
             species = model.getSpecies(i)
-            species_id = f"{prefix}{species.getId()}"
+            species_id = species.getId()
             if species_id not in added_species:
                 new_species = merged_model.createSpecies()
                 new_species.setId(species_id)
@@ -97,11 +99,10 @@ def mergeModels(doc1: libsbml.SBMLDocument,
                 added_species.add(species_id)
 
     # Merge parameters from both models
-    for idx, model in enumerate([model1, model2]):
-        prefix = ""
+    for model in [model1, model2]:
         for i in range(model.getNumParameters()):
             param = model.getParameter(i)
-            param_id = f"{prefix}{param.getId()}"
+            param_id = param.getId()
             if param_id not in added_parameters:
                 new_param = merged_model.createParameter()
                 new_param.setId(param_id)
@@ -112,10 +113,9 @@ def mergeModels(doc1: libsbml.SBMLDocument,
 
     # Merge reactions from both models
     for idx, model in enumerate([model1, model2]):
-        prefix = ""
         for i in range(model.getNumReactions()):
             reaction = model.getReaction(i)
-            reaction_id = f"{prefix}{reaction.getId()}"
+            reaction_id = reaction.getId()
             if reaction_id not in added_reactions:
                 new_reaction = merged_model.createReaction()
                 new_reaction.setId(reaction_id)
@@ -143,27 +143,16 @@ def mergeModels(doc1: libsbml.SBMLDocument,
                     modifier = reaction.getModifier(j)
                     new_modifier = new_reaction.createModifier()
                     new_modifier.setSpecies(modifier.getSpecies())
-
+                
                 # Copy kinetic law
                 kinetic_law = reaction.getKineticLaw()
                 cloned_kinetc_law = kinetic_law.clone() if kinetic_law is not None else None
                 new_reaction.setKineticLaw(cloned_kinetc_law)
-                # if kinetic_law is not None:
-                #     new_kl = new_reaction.createKineticLaw()
-                #     print(new_kl.formula)
-                #     math_ast = kinetic_law.getMath()
-                #     if math_ast is not None:
-                #         new_kl.setMath(math_ast.deepCopy())
-
-                    # # Copy local parameters
-                    # for j in range(kinetic_law.getNumParameters()):
-                    #     local_param = kinetic_law.getParameter(j)
-                    #     new_local_param = new_kl.createParameter()
-                    #     new_local_param.setId(local_param.getId())
-                    #     if local_param.isSetValue():
-                    #         new_local_param.setValue(local_param.getValue())
-                    #     new_local_param.setConstant(local_param.getConstant())
 
                 added_reactions.add(reaction_id)
-
-    return merged_doc
+    # Construct the model string
+    writer = libsbml.SBMLWriter()
+    sbml_str = writer.writeSBMLToString(merged_doc)
+    rr = te.loadSBMLModel(sbml_str)
+    #
+    return rr.getAntimony()

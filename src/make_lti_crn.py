@@ -18,7 +18,7 @@ Characteristics of the generated CRN.
 import random
 import numpy as np
 import tellurium as te  # type: ignore
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 
 def makeLtiCrn(
@@ -75,8 +75,33 @@ def makeLtiCrn(
     ##
     def makeSpeciesName(idx: int) -> str:
         return f"{species_prefix}{idx}{species_suffix}"
+    ##
     def extractSpeciesNumber(species_name: str) -> int:
         return int(species_name[len(species_prefix):-len(species_suffix)])
+    ##
+    def addDegradationReactions(antimony_str: str,
+        degradation_dct: dict[int, float],
+        rate_constant_prefix: str
+        ) -> str:
+        """ Adds degradation reactions to the Antimony string for the specified species.
+        Degradation reactions are of the form:
+            JDi: Si -> ; kd_i * Si
+        """
+        degradation_lines:List[str] = []
+        for idx, degradation_rate in degradation_dct.items():
+            if np.isclose(degradation_rate, 0):
+                continue
+            species = species_names[idx]
+            degradation_lines.append(f"  JD{idx}: {species} -> ; {rate_constant_prefix}d_{idx} * {species}")
+            degradation_lines.append(f"  {rate_constant_prefix}d_{idx} = {degradation_rate:.4f}")
+        # Update the antimony string
+        antimony_lines = antimony_str.splitlines()
+        antimony_lines.insert(-1, "\n  # Degradation reactions")
+        antimony_lines[-1:-1] = degradation_lines  # type: ignore
+        antimony_str = "\n".join(antimony_lines)
+        #
+        return antimony_str
+
     ##
     input_species_names = [makeSpeciesName(i) for i in input_species_indices]
     #
@@ -94,14 +119,15 @@ def makeLtiCrn(
     # Initializations
     rate_constants = []
     existing_species = [makeSpeciesName(n) for n in range(starting_species_index, starting_species_index + num_species)]
-    candidate_product_species = existing_species[2:]
     for input_species_name in input_species_names:
         existing_species.append(input_species_name)
+    existing_species = list(set(existing_species))
+    candidate_product_species = [s for s in existing_species if s not in input_species_names]
 
     # Define the species
     antimony_lines.append("  # Species")
-    for i in range(starting_species_index, starting_species_index + num_species):
-        species_name = makeSpeciesName(i)
+    #for i in range(starting_species_index, starting_species_index + num_species):
+    for species_name in existing_species:
         antimony_lines.append(f"  species {species_name};")
     antimony_lines.append("")
     
@@ -172,10 +198,9 @@ def makeLtiCrn(
             antimony_lines.append(f"  {prefix}{species} = 1  # Input boundary species")
         else:
             antimony_lines.append(f"  {species} = 0")
-    
+    # Terminate the model so can evaluate it in Roadrunner
     antimony_lines.append("\nend")
     antimony_str = "\n".join(antimony_lines)
-
     # Make the network stable by adding degradation reactions.
     # We will use Gershgorin's Circle Theorem to check stability.
     rr = te.loada(antimony_str)
@@ -193,22 +218,19 @@ def makeLtiCrn(
             if margin >= 0:
                 degradation_dct[i] = 1.1*margin
         # Add degradation reactions for each species
-        degradation_lines = []
-        for idx, degradation_rate in degradation_dct.items():
-            species = species_names[idx]
-            degradation_lines.append(f"  JD{idx}: {species} -> ; {rate_constant_prefix}d_{idx} * {species}")
-            degradation_lines.append(f"  {rate_constant_prefix}d_{idx} = {degradation_rate:.4f}")
-        # Insert degradation reactions before 'end'
-        antimony_lines = antimony_str.splitlines()
-        antimony_lines.insert(-1, "\n  # Degradation reactions")
-        antimony_lines[-1:-1] = degradation_lines
-        antimony_str = "\n".join(antimony_lines)
-
-    # Check that all eigenvalues have negative real parts
-    rr = te.loada(antimony_str)
-    jacobian1_arr = rr.getFullJacobian()
-    eigenvalues = np.linalg.eigvals(jacobian1_arr)
-    if np.any(eigenvalues.real > 0):
-        raise RuntimeError("Generated CRN is not stable after adding degradation reactions.")
-
+        antimony_str = addDegradationReactions(antimony_str,
+                degradation_dct, rate_constant_prefix) 
+    # Add more degradations if still not bounded output
+    for idx in range(5):
+        rr = te.loada(antimony_str)
+        jacobian1_arr = rr.getFullJacobian()
+        eigenvalues = np.linalg.eigvals(jacobian1_arr)
+        if np.all(eigenvalues.real < 0):
+            break
+        degradation_dct = {n: 10**idx for index, n in enumerate(range(len(species_names)))}
+        antimony_str = addDegradationReactions(antimony_str,
+                degradation_dct, rate_constant_prefix) 
+    else:
+        raise RuntimeError("Could not stabilize the generated CRN.")
+    #
     return antimony_str
