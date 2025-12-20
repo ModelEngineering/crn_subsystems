@@ -205,6 +205,5 @@ class TestMergeModels(unittest.TestCase):
                         dcts["merged"][species], dcts[key][species], atol=1e-6))
 
 
-
 if __name__ == '__main__':
     unittest.main()
