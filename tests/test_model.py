@@ -1,5 +1,5 @@
 from src.model import Model  # type: ignore
-from src.make_lti_crn import makeLtiCrn  # type: ignore
+from src.lti_crn import LtiCrn  # type: ignore
 
 import numpy as np
 import unittest
@@ -100,7 +100,7 @@ class TestModel(unittest.TestCase):
         for _ in range(5):
             num_species = 6
             num_reaction = 8
-            antimony_str = makeLtiCrn(num_species=num_species, num_reaction=num_reaction, seed=None)
+            antimony_str = LtiCrn(num_species=num_species, num_reaction=num_reaction, seed=None).antimony_str
             original_model = Model(antimony_str)
             excluded_species_names = [f"S{n+1}_" for n in np.random.randint(num_species, size=2)]
             species_names = list(set(original_model.species_names) - set(excluded_species_names))

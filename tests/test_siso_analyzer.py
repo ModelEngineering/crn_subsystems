@@ -1,5 +1,5 @@
 from src.siso_analyzer import SISOAnalyzer  # type: ignore
-from src.make_lti_crn import makeLtiCrn  # type: ignore
+from src.lti_crn import LtiCrn  # type: ignore
 
 import matplotlib.pyplot as plt  # type: ignore
 from scipy import signal  # type: ignore
@@ -474,11 +474,11 @@ class TestMakeSequentialAntimony(unittest.TestCase):
         if IGNORE_TEST:
             return
         for _ in range(5):
-            model = makeLtiCrn(num_species=10,
+            model = LtiCrn(num_species=10,
                     num_reaction=100,
                     num_products_bounds=(1, 5),
                     kinetic_constant_bounds= (0.1, 1),
-                    stoichiometry_bounds=(1, 3))
+                    stoichiometry_bounds=(1, 3)).antimony_str
             if IS_PLOT and not self.compareStepResponse(model):
                 print("Could not compare step response for generated model")
 
